@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+
 	"github.com/rodrigoprobst/go-plan-management/internal/resolver"
 )
 

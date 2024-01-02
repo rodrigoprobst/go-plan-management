@@ -2,9 +2,41 @@ ifneq ("$(wildcard .env)","")
   $(info using .env)
   include .env
 endif
-# ==================================================================================== #
-# HELPERS
-# ==================================================================================== #
+current_time = $(shell date "+%Y-%m-%dT%H:%M:%S%z")
+git_description = $(shell git describe --always --dirty --tags --long)
+linker_flags = '-s -X main.buildTime=${current_time} -X main.version=${git_description}'
+
+## up: initiate docker containers
+.PHONY: up
+up:
+	docker compose up --build -d
+
+## down: removes docker containers
+.PHONY: down
+down:
+	docker compose down
+
+## api-logs: tail consumers logs
+.PHONY: api-logs
+api-logs:
+	docker compose logs api -f
+
+## run/api: run the cmd/api application
+.PHONY: run/api
+run/api:
+	@go run ./cmd/api/...
+
+## build/api: build the cmd/api application
+.PHONY: build/api
+build/api: install-hooks
+	@echo 'Building cmd/api...'
+	go build -ldflags=${linker_flags} -o=./bin/api ./cmd/api
+
+## install-hooks: install git hooks
+.PHONY: install-hooks
+install-hooks:
+	cp .setup/scripts/hooks/pre-push .git/hooks/
+	chmod +x .git/hooks/pre-push
 
 ## help: print this help message
 .PHONY: help
@@ -12,47 +44,34 @@ help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' | sed -e 's/^/ /'
 
-
-# ==================================================================================== #
-# QUALITY CONTROL
-# ==================================================================================== #
-
 ## test: test all code
+go-test:
+	go test -race -vet=off -cpu $(shell nproc) -coverpkg ./... -v -coverprofile=cover.out  ./...
+
 .PHONY: test
-test:
-	go test -race -vet=off -coverpkg ./... -v -coverprofile=cover.out  ./...
+test: go-test
 	go tool cover -func=cover.out
 
-# test: local test all code
-.PHONY: local_test
-local_test:
-	go test -race -vet=off -coverpkg  ./... -v -coverprofile=cover.out  ./...
+# test-coverage: test code with coverage reports as html
+.PHONY: test-coverage
+test-coverage: go-test
 	go tool cover -html=cover.out
 
 .PHONY: audit
 audit:
-	@echo 'Formatting code...'
 	@docker run \
 		--rm -t \
-		-v "$(shell pwd)/tmp/golangci-cache:/.cache" \
+		-v "$(shell pwd)/tmp/golangci-cache:/root/.cache" \
 		-v "$(shell pwd):/app" \
-		--workdir /app \
-		golangci/golangci-lint \
+		-w /app \
+		golangci/golangci-lint:latest \
 		golangci-lint run --fix --config "/app/.golangci.yml" --verbose
 
 ## tidy: tidy dependencies
 .PHONY: tidy
-tidy:
-	@echo 'Tidying and verifying module dependencies...'
+tidy: audit
 	go mod tidy
 	go mod verify
-	@docker run \
-		--rm -t \
-		-v "$(shell pwd)/tmp/golangci-cache:/.cache" \
-		-v "$(shell pwd):/app" \
-		--workdir /app \
-		golangci/golangci-lint:latest \
-		golangci-lint run --fix --verbose
 
 ## sonar: local sonar qube analysis
 .PHONY: sonar --sonar-container-create --sonar-network-create sonar-prune
@@ -107,40 +126,3 @@ sonar: test --sonar-network-create --sonar-container-create
 sonar-prune:
 	@docker container stop sonar
 	@docker network rm sonar-net
-
-# ==================================================================================== #
-# DEV
-# ==================================================================================== #
-
-## run/api: run the cmd/api application
-.PHONY: run/api
-run/api:
-	@go run ./cmd/api/...
-
-current_time = $(shell date "+%Y-%m-%dT%H:%M:%S%z")
-git_description = $(shell git describe --always --dirty --tags --long)
-linker_flags = '-s -X main.buildTime=${current_time} -X main.version=${git_description}'
-
-## build/api: build the cmd/api application
-.PHONY: build/api
-build/api:
-	@echo 'Building cmd/api...'
-	go build -ldflags=${linker_flags} -o=./bin/api ./cmd/api
-
-# ==================================================================================== #
-# DOCKER
-# ==================================================================================== #
-## up: initiate docker containers
-.PHONY: up
-up:
-	docker compose up --build -d
-
-## down: removes docker containers
-.PHONY: down
-down:
-	docker compose down
-
-## tail: tail consumers logs
-.PHONY: api-logs
-api-logs:
-	docker compose logs api -f

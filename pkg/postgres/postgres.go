@@ -3,6 +3,7 @@ package postgres
 import (
 	"database/sql"
 	"fmt"
+
 	"github.com/rodrigoprobst/go-plan-management/pkg/configs"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"

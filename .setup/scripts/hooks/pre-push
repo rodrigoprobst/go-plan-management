@@ -1,0 +1,13 @@
+#!/bin/sh
+
+echo "\n Running pre-push hook..."
+
+ENTRYPOINT=".setup/scripts/hooks/pre-push-entrypoint.sh"
+
+if [ ! -f "$ENTRYPOINT" ]; then
+    echo "No pre-push entrypoint found, skipping pre-push hook."
+    exit 0
+fi
+
+# Call pre-push entrypoint
+sh "$ENTRYPOINT"

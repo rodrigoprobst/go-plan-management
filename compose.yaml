@@ -1,0 +1,41 @@
+x-host-docker-internal: &host-docker-internal
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
+
+x-default-network: &default-network
+  networks:
+    - go-plan-management-network
+
+services:
+  api:
+    container_name: go-plan-management-api
+    build:
+      context: .
+      dockerfile: ./.setup/build/Dockerfile
+      target: dev
+    ports:
+      - "${DEBUG_PORT:-9001}:9001"
+      - "${HTTP_PORT:-8080}:${HTTP_PORT:-8080}"
+    volumes:
+        - .:/app:rw,delegated
+    depends_on:
+      - postgres
+    <<: [*default-network, *host-docker-internal]
+
+  postgres:
+    container_name: go-plan-management-db
+    image: postgres
+    restart: always
+    ports:
+      - '5432:5432'
+    volumes:
+      - .docker-volumes/postgres-volume:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_DB: 'go-plan-management'
+    <<: [*default-network, *host-docker-internal]
+
+networks:
+  go-plan-management-network:
+    driver: bridge

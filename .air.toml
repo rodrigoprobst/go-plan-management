@@ -1,0 +1,9 @@
+# Working directory
+root = "."
+tmp_dir = "tmp"
+
+[build]
+cmd = "go build -gcflags='all=-N -l' -ldflags='-X main.version=development' -o=./bin/api ./cmd/api"
+bin = "bin/api"
+full_bin = "dlv exec --accept-multiclient --log --headless --continue --listen :9001 --api-version 2 ./bin/api"
+include_file = ["./.env"]

@@ -45,11 +45,11 @@ var (
 func initializeApplicationConfigs() {
 	if ApplicationCfg == nil {
 		ApplicationCfg = &AppConfig{
-			Env:                GetEnv("ENV", ""),
+			Env:                GetEnv("ENV", Production),
 			LogLevel:           GetEnv("LOG_LEVEL", "info"),
 			AppName:            GetEnv("APP_NAME", ""),
 			AppVersion:         GetEnv("APP_VERSION", Version),
-			Port:               GetEnv("HTTP_PORT", ""),
+			Port:               GetEnv("HTTP_PORT", "80"),
 			CorsTrustedOrigins: getEnvAsSlice("CORS_TRUSTED_ORIGINS", []string{}, " "),
 		}
 	}
